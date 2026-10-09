@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Productivity Dashboard</title>
+
+<style>
+:root {
+  --blue: #3978f6;
+  --navy: #17233f;
+  --bg: #f4f7fc;
+  --text: #192747;
+  --muted: #71809b;
+  --border: #e4eaf4;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+.layout { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: 225px;
+  background: var(--navy);
+  color: white;
+  padding: 26px 15px;
+  flex-shrink: 0;
+}
+.brand { font-size: 22px; font-weight: bold; margin: 0 8px 35px; }
+.brand small { display: block; font-size: 13px; margin-top: 7px; color: #bdc9e1; }
+.nav {
+  display: block; width: 100%; padding: 14px;
+  border: 0; border-radius: 9px; background: transparent;
+  color: #dce5f6; text-align: left; margin: 7px 0;
+}
+.nav.active, .nav:hover { background: var(--blue); color: white; }
+
+main { flex: 1; min-width: 0; padding: 27px; }
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 25px; flex-wrap: wrap;
+}
+h1 { margin: 0 0 8px; font-size: 29px; }
+.subtitle { color: var(--muted); margin: 0; }
+.profile { color: var(--muted); }
+
+.stats {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px; margin-bottom: 23px;
+}
+.stat {
+  background: white; border: 1px solid var(--border);
+  border-radius: 12px; padding: 21px;
+}
+.stat p { margin: 0; color: var(--muted); font-size: 14px; }
+.stat h2 { margin: 12px 0 5px; font-size: 30px; }
+.stat span { font-size: 12px; color: var(--blue); }
+
+.content {
+  display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(260px, 1fr);
+  gap: 18px;
+}
+.panel {
+  background: white; border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px; margin-bottom: 18px;
+  min-width: 0;
+}
+.panel-heading {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 18px;
+}
+h3 { margin: 0; font-size: 18px; }
+.primary {
+  background: var(--blue); color: white; border: none;
+  border-radius: 8px; padding: 11px 16px;
+}
+.secondary {
+  background: #edf3ff; color: var(--blue); border: none;
+  border-radius: 8px; padding: 9px 12px;
+}
+.danger { color: #ed4e59; background: #fff0f0; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.controls input, .controls select {
+  padding: 10px; border: 1px solid var(--border);
+  border-radius: 8px; background: white; min-width: 120px;
+}
+table { width: 100%; border-collapse: collapse; }
+th, td {
+  padding: 13px 9px; border-bottom: 1px solid var(--border);
+  text-align: left; font-size: 13px;
+}
+th { color: var(--muted); font-weight: 600; }
+td { overflow-wrap: anywhere; }
+.pill {
+  display: inline-block; padding: 6px 9px; border-radius: 20px;
+  font-size: 11px; white-space: nowrap;
+}
+.High { background: #ffe3e5; color: #dc3545; }
+.Medium { background: #fff2c8; color: #a66a00; }
+.Low { background: #d9f6e9; color: #087b51; }
+.status { background: #edf1f7; color: #586782; }
+.Completed { background: #d9f6e9; color: #087b51; }
+.InProgress { background: #e0ebff; color: #245edb; }
+.Overdue { background: #ffe3e5; color: #dc3545; }
+.actions { display: flex; gap: 5px; }
+.actions button { padding: 6px; border: 0; border-radius: 5px; }
+.empty { color: var(--muted); text-align: center; padding: 25px; }
+.goal { margin: 20px 0; }
+.goal-line { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
+.progress { height: 9px; background: #eaf0f8; border-radius: 20px; overflow: hidden; }
+.progress div { height: 100%; background: var(--blue); border-radius: 20px; }
+.goal small { display: block; margin-top: 7px; color: var(--muted); }
+.quote {
+  background: #e9edff; color: #3948a1; border-radius: 12px;
+  padding: 24px; line-height: 1.7;
+}
+.view { display: none; }
+.view.active { display: block; }
+
+.modal {
+  display: none; position: fixed; inset: 0; z-index: 10;
+  background: rgba(14, 25, 49, .55); padding: 20px;
+  align-items: center; justify-content: center;
+}
+.modal.open { display: flex; }
+.dialog {
+  width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
+  background: white; border-radius: 15px; padding: 25px;
+}
+.dialog h2 { margin-top: 0; }
+.field { margin: 14px 0; }
+.field label { display: block; font-size: 13px; margin-bottom: 7px; }
+.field input, .field select {
+  width: 100%; padding: 11px; border: 1px solid #dce4f1;
+  border-radius: 8px; background: white;
+}
+.form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+.goal-card { border: 1px solid var(--border); padding: 16px; border-radius: 10px; margin: 12px 0; }
+
+@media (max-width: 1000px) {
+  .sidebar { width: 175px; }
+  main { padding: 18px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .content { grid-template-columns: 1fr; }
+  .table-wrap { overflow-x: auto; }
+  table { min-width: 650px; }
+}
+@media (max-width: 600px) {
+  .layout { display: block; }
+  .sidebar { width: 100%; padding: 14px; }
+  .brand { margin: 4px 5px 12px; }
+  .nav {
+    display: inline-block; width: auto; margin: 3px;
+    padding: 10px; font-size: 12px;
+  }
+  main { padding: 14px; }
+  h1 { font-size: 23px; }
+  .stat { padding: 14px; }
+  .stat h2 { font-size: 25px; }
+}
+</style>
+</head>
+
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">✓ Productivity<small>Daily Dashboard</small></div>
+    <button class="nav active" data-view="home">⌂ &nbsp; Dashboard</button>
+    <button class="nav" data-view="tasks">☷ &nbsp; My Tasks</button>
+    <button class="nav" data-view="goals">◎ &nbsp; My Goals</button>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <div>
+        <h1 id="greeting">Hello! 👋</h1>
+        <p class="subtitle">Stay focused, stay productive.</p>
+      </div>
+      <div class="profile">📅 <span id="today"></span></div>
+    </header>
+
+    <section class="stats">
+      <div class="stat"><p>Total Tasks</p><h2 id="total">0</h2><span>All your tasks</span></div>
+      <div class="stat"><p>Completed</p><h2 id="completed">0</h2><span>Tasks finished</span></div>
+      <div class="stat"><p>Pending</p><h2 id="pending">0</h2><span>Tasks to do</span></div>
+      <div class="stat"><p>Completion Rate</p><h2 id="rate">0%</h2><span>Keep it up!</span></div>
+    </section>
+
+    <section id="home" class="view active">
+      <div class="content">
+        <div>
+          <section class="panel">
+            <div class="panel-heading">
+              <h3>My Tasks</h3>
+              <button class="primary" onclick="openTask()">+ Add Task</button>
+            </div>
+            <div class="controls">
+              <input id="search" placeholder="Search tasks..." oninput="render()">
+              <select id="filterPriority" onchange="render()">
+                <option value="">All priorities</option>
+                <option>High</option><option>Medium</option><option>Low</option>
+              </select>
+              <select id="filterStatus" onchange="render()">
+                <option value="">All statuses</option>
+                <option value="Not Started">Not Started</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr>
+                  <th>Task</th><th>Priority</th><th>Deadline</th>
+                  <th>Status</th><th>Actions</th>
+                </tr></thead>
+                <tbody id="taskRows"></tbody>
+              </table>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-heading">
+              <h3>Productivity Summary</h3>
+            </div>
+            <p class="subtitle" id="summary">Add a task to get started!</p>
+            <div class="progress"><div id="overallBar" style="width:0%"></div></div>
+          </section>
+        </div>
+
+        <div>
+          <section class="panel">
+            <div class="panel-heading">
+              <h3>Goals Progress</h3>
+              <button class="secondary" onclick="showView('goals')">View All</button>
+            </div>
+            <div id="goalPreview"></div>
+            <button class="secondary" onclick="openGoal()">+ Add Goal</button>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading"><h3>Upcoming Deadlines</h3></div>
+            <div id="deadlines"></div>
+          </section>
+
+          <div class="quote">
+            ✨ <strong>Small steps every day lead to big results.</strong>
+            <p>Focus on progress, not perfection.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tasks" class="view">
+      <section class="panel">
+        <div class="panel-heading">
+          <h3>Manage All Tasks</h3>
+          <button class="primary" onclick="openTask()">+ New Task</button>
+        </div>
+        <p class="subtitle">Create tasks, update priorities, change status, and track deadlines.</p>
+        <div class="table-wrap" style="margin-top:18px">
+          <table>
+            <thead><tr><th>Task</th><th>Priority</th><th>Deadline</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="allTaskRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section id="goals" class="view">
+      <section class="panel">
+        <div class="panel-heading">
+          <h3>My Goals</h3>
+          <button class="primary" onclick="openGoal()">+ Add Goal</button>
+        </div>
+        <p class="subtitle">Track your goals by linking tasks to each goal.</p>
+        <div id="allGoals"></div>
+      </section>
+    </section>
+  </main>
+</div>
+
+<!-- Task form -->
+<div class="modal" id="taskModal">
+  <div class="dialog">
+    <h2 id="taskFormTitle">Add New Task</h2>
+    <form id="taskForm">
+      <input type="hidden" id="taskId">
+      <div class="field"><label for="taskTitle">Task title *</label><input id="taskTitle" required maxlength="120" placeholder="e.g. Study React hooks"></div>
+      <div class="field"><label for="taskPriority">Priority</label>
+        <select id="taskPriority"><option>High</option><option selected>Medium</option><option>Low</option></select>
+      </div>
+      <div class="field"><label for="taskDeadline">Deadline *</label><input type="date" id="taskDeadline" required></div>
+      <div class="field"><label for="taskStatus">Status</label>
+        <select id="taskStatus"><option>Not Started</option><option>In Progress</option><option>Completed</option></select>
+      </div>
+      <div class="field"><label for="taskGoal">Related goal</label><select id="taskGoal"><option value="">No goal</option></select></div>
+      <div class="form-actions">
+        <button type="button" class="secondary" onclick="closeModal('taskModal')">Cancel</button>
+        <button class="primary" type="submit">Save Task</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Goal form -->
+<div class="modal" id="goalModal">
+  <div class="dialog">
+    <h2 id="goalFormTitle">Add New Goal</h2>
+    <form id="goalForm">
+      <input type="hidden" id="goalId">
+      <div class="field"><label for="goalTitle">Goal name *</label><input id="goalTitle" required maxlength="100" placeholder="e.g. Learn MERN stack"></div>
+      <div class="field"><label for="goalDeadline">Target date *</label><input type="date" id="goalDeadline" required></div>
+      <div class="form-actions">
+        <button type="button" class="secondary" onclick="closeModal('goalModal')">Cancel</button>
+        <button type="submit" class="primary">Save Goal</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const today = new Date();
+const dateString = d => {
+  const date = new Date(d);
+  return isNaN(date) ? "" : date.toLocaleDateString();
+};
+const localISO = d => {
+  const date = new Date(d);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 10);
+};
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+$("today").textContent = today.toLocaleDateString(undefined, {
+  day: "numeric", month: "short", year: "numeric"
+});
+
+$("greeting").textContent = "Hello! 👋";
+
+let tasks = [];
+let goals = [];
+
+try {
+  tasks = JSON.parse(localStorage.getItem("productivityTasks")) || [];
+  goals = JSON.parse(localStorage.getItem("productivityGoals")) || [];
+} catch (e) {
+  tasks = [];
+  goals = [];
+}
+
+// Add sample data for first-time visitors
+if (!localStorage.getItem("productivityInitialized")) {
+  goals = [
+    { id: uid(), title: "Study & Learning", deadline: localISO(Date.now() + 7*86400000) },
+    { id: uid(), title: "Build MERN Project", deadline: localISO(Date.now() + 14*86400000) }
+  ];
+  tasks = [
+    { id: uid(), title: "Complete daily study notes", priority: "High", deadline: localISO(Date.now()+86400000), status: "In Progress", goal: goals[0].id },
+    { id: uid(), title: "Practice React fundamentals", priority: "Medium", deadline: localISO(Date.now()+2*86400000), status: "Not Started", goal: goals[0].id },
+    { id: uid(), title: "Plan project features", priority: "High", deadline: localISO(Date.now()+3*86400000), status: "Not Started", goal: goals[1].id },
+    { id: uid(), title: "Review yesterday's work", priority: "Low", deadline: localISO(Date.now()-86400000), status: "Completed", goal: "" }
+  ];
+  localStorage.setItem("productivityInitialized", "yes");
+  save();
+}
+
+function save() {
+  localStorage.setItem("productivityTasks", JSON.stringify(tasks));
+  localStorage.setItem("productivityGoals", JSON.stringify(goals));
+  render();
+}
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+  })[c]);
+}
+
+function showView(id) {
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  $(id).classList.add("active");
+  document.querySelectorAll(".nav").forEach(b => b.classList.toggle("active", b.dataset.view === id));
+  render();
+}
+
+document.querySelectorAll(".nav").forEach(b => {
+  b.addEventListener("click", () => showView(b.dataset.view));
+});
+
+function closeModal(id) { $(id).classList.remove("open"); }
+
+function openTask(id) {
+  $("taskForm").reset();
+  $("taskId").value = id || "";
+  $("taskFormTitle").textContent = id ? "Edit Task" : "Add New Task";
+  $("taskDeadline").value = localISO(Date.now());
+  $("taskGoal").innerHTML = '<option value="">No goal</option>' +
+    goals.map(g => `<option value="${esc(g.id)}">${esc(g.title)}</option>`).join("");
+
+  const t = tasks.find(t => t.id === id);
+  if (t) {
+    $("taskTitle").value = t.title;
+    $("taskPriority").value = t.priority;
+    $("taskDeadline").value = t.deadline;
+    $("taskStatus").value = t.status;
+    $("taskGoal").value = t.goal || "";
+  }
+  $("taskModal").classList.add("open");
+}
+
+$("taskForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const id = $("taskId").value;
+  const data = {
+    id: id || uid(),
+    title: $("taskTitle").value.trim(),
+    priority: $("taskPriority").value,
+    deadline: $("taskDeadline").value,
+    status: $("taskStatus").value,
+    goal: $("taskGoal").value
+  };
+  if (!data.title || !data.deadline) return;
+  if (id) tasks = tasks.map(t => t.id === id ? data : t);
+  else tasks.unshift(data);
+  closeModal("taskModal");
+  save();
+});
+
+function deleteTask(id) {
+  if (confirm("Delete this task?")) {
+    tasks = tasks.filter(t => t.id !== id);
+    save();
+  }
+}
+
+function toggleTask(id) {
+  tasks = tasks.map(t => t.id === id
+    ? {...t, status: t.status === "Completed" ? "Not Started" : "Completed"}
+    : t);
+  save();
+}
+
+function taskStatus(t) {
+  if (t.status !== "Completed" && t.deadline < localISO(Date.now())) return "Overdue";
+  return t.status;
+}
+
+function taskRow(t) {
+  const status = taskStatus(t);
+  const statusClass = status === "In Progress" ? "InProgress" : status.replace(/\s/g, "");
+  return `<tr>
+    <td>${esc(t.title)}</td>
+    <td><span class="pill ${esc(t.priority)}">${esc(t.priority)}</span></td>
+    <td>${esc(t.deadline)}</td>
+    <td><span class="pill ${esc(statusClass)} status">${esc(status)}</span></td>
+    <td><div class="actions">
+      <button class="secondary" title="Edit" onclick="openTask('${esc(t.id)}')">✎</button>
+      <button class="secondary" title="Mark complete / reopen" onclick="toggleTask('${esc(t.id)}')">${t.status === "Completed" ? "↶" : "✓"}</button>
+      <button class="secondary danger" title="Delete" onclick="deleteTask('${esc(t.id)}')">✕</button>
+    </div></td>
+  </tr>`;
+}
+
+function openGoal(id) {
+  $("goalForm").reset();
+  $("goalId").value = id || "";
+  $("goalFormTitle").textContent = id ? "Edit Goal" : "Add New Goal";
+  $("goalDeadline").value = localISO(Date.now() + 7*86400000);
+  const g = goals.find(g => g.id === id);
+  if (g) {
+    $("goalTitle").value = g.title;
+    $("goalDeadline").value = g.deadline;
+  }
+  $("goalModal").classList.add("open");
+}
+
+$("goalForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const id = $("goalId").value;
+  const data = { id: id || uid(), title: $("goalTitle").value.trim(), deadline: $("goalDeadline").value };
+  if (!data.title || !data.deadline) return;
+  if (id) goals = goals.map(g => g.id === id ? data : g);
+  else goals.push(data);
+  closeModal("goalModal");
+  save();
+});
+
+function deleteGoal(id) {
+  if (!confirm("Delete this goal? Tasks linked to it will become unassigned.")) return;
+  goals = goals.filter(g => g.id !== id);
+  tasks = tasks.map(t => t.goal === id ? {...t, goal: ""} : t);
+  save();
+}
+
+function goalCard(g) {
+  const linked = tasks.filter(t => t.goal === g.id);
+  const done = linked.filter(t => t.status === "Completed").length;
+  const pct = linked.length ? Math.round(done / linked.length * 100) : 0;
+  return `<div class="goal-card">
+    <div class="goal-line"><strong>${esc(g.title)}</strong><span>${pct}%</span></div>
+    <div class="progress"><div style="width:${pct}%"></div></div>
+    <small>${done} of ${linked.length} linked tasks completed · Target: ${esc(g.deadline)}</small>
+    <div class="actions" style="margin-top:12px">
+      <button class="secondary" onclick="openGoal('${esc(g.id)}')">Edit</button>
+      <button class="secondary danger" onclick="deleteGoal('${esc(g.id)}')">Delete</button>
+    </div>
+  </div>`;
+}
+
+function render() {
+  const completed = tasks.filter(t => t.status === "Completed").length;
+  const pending = tasks.length - completed;
+  const rate = tasks.length ? Math.round(completed / tasks.length * 100) : 0;
+
+  $("total").textContent = tasks.length;
+  $("completed").textContent = completed;
+  $("pending").textContent = pending;
+  $("rate").textContent = rate + "%";
+  $("overallBar").style.width = rate + "%";
+  $("summary").textContent = tasks.length
+    ? `You have completed ${completed} of ${tasks.length} tasks. ${pending ? `${pending} tasks still need your attention.` : "All tasks are complete. Great job!"}`
+    : "No tasks yet. Add your first task to get started!";
+
+  const search = ($("search")?.value || "").toLowerCase();
+  const priority = $("filterPriority")?.value || "";
+  const status = $("filterStatus")?.value || "";
+
+  const filtered = tasks.filter(t =>
+    t.title.toLowerCase().includes(search) &&
+    (!priority || t.priority === priority) &&
+    (!status || t.status === status)
+  );
+
+  const rows = filtered.length ? filtered.map(taskRow).join("") :
+    '<tr><td colspan="5" class="empty">No tasks found. Add a task to get started!</td></tr>';
+
+  $("taskRows").innerHTML = rows;
+  $("allTaskRows").innerHTML = rows;
+
+  $("goalPreview").innerHTML = goals.length
+    ? goals.slice(0, 4).map(goalCard).join("")
+    : '<p class="empty">No goals yet. Add your first goal!</p>';
+
+  $("allGoals").innerHTML = goals.length
+    ? goals.map(goalCard).join("")
+    : '<p class="empty">No goals yet. Add your first goal!</p>';
+
+  const upcoming = tasks
+    .filter(t => t.status !== "Completed")
+    .sort((a, b) => a.deadline.localeCompare(b.deadline))
+    .slice(0, 5);
+
+  $("deadlines").innerHTML = upcoming.length ? upcoming.map(t =>
+    `<div class="goal">
+      <div class="goal-line"><strong>${esc(t.title)}</strong><span class="pill ${esc(t.priority)}">${esc(t.priority)}</span></div>
+      <small>${esc(dateString(t.deadline))} · ${esc(taskStatus(t))}</small>
+    </div>`
+  ).join("") : '<p class="empty">No upcoming deadlines!</p>';
+}
+
+document.querySelectorAll(".modal").forEach(modal => {
+  modal.addEventListener("click", e => {
+    if (e.target === modal) modal.classList.remove("open");
+  });
+});
+
+render();
+</script>
+</body>
+</html>

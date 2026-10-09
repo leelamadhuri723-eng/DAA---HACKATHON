@@ -1,0 +1,12 @@
+#root {
+  min-height: 100vh;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+*.icon {
+  display: inline-flex;
+}
